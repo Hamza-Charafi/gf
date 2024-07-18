@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #jsonDisplay {
+            margin-top: 20px;
+        }
+
+        .item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .deleteButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #jsonOutput {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+
+        button {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Offline App</h1>
+    <input type="file" id="fileInput" accept=".json">
+    <div id="jsonDisplay"></div>
+    <button id="addButton">Add Item</button>
+    <button id="downloadButton">Download JSON</button>
+    <h2>Updated JSON:</h2>
+    <textarea id="jsonOutput" readonly></textarea>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('addButton').addEventListener('click', addItem);
+        document.getElementById('downloadButton').addEventListener('click', downloadJson);
+
+        let jsonData = [];
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    jsonData = JSON.parse(e.target.result);
+                    displayJson();
+                    updateJsonOutput();
+                }
+                reader.readAsText(file);
+            }
+        }
+
+        function displayJson() {
+            const jsonDisplay = document.getElementById('jsonDisplay');
+            jsonDisplay.innerHTML = '';
+            jsonData.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'item';
+                itemDiv.innerHTML = `
+                    <pre>${JSON.stringify(item, null, 2)}</pre>
+                    <button class="deleteButton" onclick="deleteItem(${index})">Delete</button>
+                `;
+                jsonDisplay.appendChild(itemDiv);
+            });
+        }
+
+        function addItem() {
+            const newItem = prompt('Enter new item in JSON format:');
+            try {
+                const jsonObject = JSON.parse(newItem);
+                jsonData.push(jsonObject);
+                displayJson();
+                updateJsonOutput();
+            } catch (error) {
+                alert('Invalid JSON format');
+            }
+        }
+
+        function deleteItem(index) {
+            jsonData.splice(index, 1);
+            displayJson();
+            updateJsonOutput();
+        }
+
+        function updateJsonOutput() {
+            const jsonOutput = document.getElementById('jsonOutput');
+            jsonOutput.value = JSON.stringify(jsonData, null, 2);
+        }
+
+        function downloadJson() {
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'updated_json.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
